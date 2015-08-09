@@ -1,0 +1,58 @@
+web:
+  restart: always
+  build: ./web
+  expose:
+    - "8000"
+  links:
+    - postgres:postgres
+    - elastic:elastic
+    - redis:redis
+  env_file: .env
+  command: /usr/local/bin/gunicorn -w 2 -b :8000 app:app
+
+nginx:
+  restart: always
+  build: ./nginx
+  ports:
+    - "80:80"
+  volumes:
+    - /www/static
+  volumes_from:
+    - web
+  links:
+    - web:web
+
+pgdata:
+  restart: always
+  image: postgres:9.5
+  volumes:
+    - /var/lib/postgresql
+  command: "true"
+
+postgres:
+  restart: always
+  build: ./postgres
+  volumes_from:
+    - pgdata
+  ports:
+    - "5432:5432"
+
+esdata:
+  restart: always
+  image: elasticsearch:1.7.1
+  volumes:
+    - /usr/share/elasticsearch/data
+  command: "true"
+
+elastic:
+  restart: always
+  build: ./elastic
+  volumes_from:
+    - esdata
+  ports:
+    - "9200:9200"
+    - "9300:9300"
+
+redis:
+  restart: always
+  image: redis:3.0.3
